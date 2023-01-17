@@ -10,7 +10,7 @@ Is generally faster than expected.
 
 ## B-star tree
 
-A B-tree is built based on the data. Branch selection in internal nodes is done with a templated power-of-2 -based bianry search.
+A B-tree is built based on the data. Branch selection in internal nodes is done with a templated power-of-2 -based binary search.
 
 Is pretty ok but very space inefficient and loses comparative perofmance as the data structure size grows.
 
