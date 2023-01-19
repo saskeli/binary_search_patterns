@@ -58,19 +58,21 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 
 ### AMD EPYC 7452, 10 million elements
 
-|             | b-star    |heap       | binary   |
-|-------------|-----------|-----------|----------|
-| interlieved | 512.926ns | 471.164ns | 733.06ns |
-| separate    | 456.826ns | 383.962ns | 534.394ns|
-| space       | 157.511MB | 128MB     | 76.294MB |
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 435.315ns | 452.6ns   | 701.07ns  | 343.715ns |
+| separate    | 363.409ns | 331.548ns | 524.348ns | 313ns     |
+| space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
+
 
 ### Intel(R) Xeon(R) CPU E7-8890 v4, 10 million elements
 
-|             | b-star    |heap       | binary   |
-|-------------|-----------|-----------|----------|
-| interlieved | 436.847ns | 512.116ns | 673.536ns|
-| separate    | 366.199ns | 414.743ns | 532.118ns|
-| space       | 157.511MB | 128MB     | 76.294MB |
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 366.863ns | 417.233ns | 505.9ns   | 279.846ns |
+| separate    | 303.785ns | 345.14ns  | 422.613ns | 241.694ns |
+| space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
+
 
 ### Intel(R) Core(TM) i5-6200U
 
