@@ -20,13 +20,13 @@ Input data is "reordered" in such a way that the middle element is first, then t
 
 Uses up to double the space of the raw data due to the data not necessarily conforming to the linearized tree topology.
 
-Is typically the fastest of the approaches as long as the input data is large enough.
+Is typically faster than the B-star tree.
 
 ### B-heap tree
 
 Combination of B-star tree and Heap ordered binary search. The B-tree nodes are stored in heap order. No child offsets or pointers are stored since children of a node at index `i` will be between indexes `i*B + 1` and `i*B + B`.
 
-Seems to be very space efficient and fast.
+Seems to be very space efficient and fast in practice.
 
 ## Usage
 
