@@ -238,6 +238,118 @@ class heap_order_search {
     }
 };
 
+template <uint64_t block_size = 64>
+class b_heap_search {
+   private:
+    static_assert(__builtin_popcountll(block_size) == 1);
+    static_assert(block_size <= 1024);
+    static_assert(block_size >= 2);
+
+    class node {
+       public:
+        typedef std::pair<uint64_t, uint64_t> item;
+        uint64_t children[block_size];
+
+       private:
+        template<uint16_t size>
+        static item branch(const item* arr, uint64_t q) {
+            if constexpr (size == 2) {
+                return arr[1] < q ? {arr[1], 1} : {arr[0], 0};
+            }
+            uint64_t offset = (arr[size / 2] < q) * (size / 2);
+            item res = branch<size / 2>(arr + offset, q);
+            return {res.first, offset + res.second};
+        }
+
+       public:
+
+        node() : children() {
+            std::fill_n(children, block_size, ~uint64_t(0));
+        }
+
+        node(const node& other) : children() {
+            std::copy(other.children, other.children + block_size, children);
+        }
+
+        node& operator=(const node& other) {
+            std::copy(other.children, other.children + block_size, children);
+            return *this;
+        }
+
+        item find(uint64_t q) const {
+            constexpr uint64_t lines = CACHE_LINE / sizeof(uint64_t);
+            for (uint64_t i = 0; i < block_size; i += lines) {
+                __builtin_prefetch(children + i);
+            }
+            return branch<block_size>(children, q);
+        }
+
+        void print() {
+            for (uint64_t i = 0; i < block_size; i++) {
+                std::cout << children[i].first << ", " << children[i].second << std::endl;
+            }
+        }
+    };
+
+    struct stack_elem {
+        uint64_t index;
+        uint64_t a;
+        uint64_t b;
+        uint64_t depth;
+    };
+    
+    node* nodes_;
+    uint64_t levels_;
+   public:
+    b_heap_search(uint64_t* data, uint64_t n) : levels_(1) {
+        std::vector<uint64_t> c_per_level;
+        uint64_t nn = n / block_size + (n % block_size ? 1 : 0);
+        uint64_t leaves = nn;
+        while (nn > block_size) {
+            nn = nn / block_size + (nn % block_size ? 1 : 0);
+            levels_++;
+        }
+        uint64_t n_lev = 1;
+        uint64_t t_nodes = n_lev;
+        for (uint64_t i = 1; i < levels_; i++) {
+            n_lev *= 64;
+            t_nodes += n_lev;
+        }
+        nodes_ = (node*)malloc((t_nodes + leaves) * sizeof(node));
+        std::fill_n(nodes_, t_nodes + leaves, node());
+        std::memcpy(nodes_ + t_nodes, data, n);
+        for (uint64_t i = t_nodes - 1; i < t_nodes; i--) {
+            for (uint64_t k = 0; k < block_size; k++) {
+                uint64_t c_idx = i * block_size + k + 1;
+                if (c_idx < t_nodes + leaves) {
+                    nodes[i].children[k] = nodes[i * block_size + k + 1].children[0];
+                }
+            }
+        }
+    }
+
+    std::pair<uint64_t, uint64_t> find(uint64_t q) const {
+        std::pair<uint64_t, uint64_t> ret = {0, 0};
+        for (uint64_t i = 0; i < levels_; i++) {
+            auto res = nodes_[ret.second].find(q);
+            ret = {res.first, ret.second * block_size + res.second};
+        }
+        return ret;
+    }
+
+    void print() {
+        std::cout << "B-star search tree with " << node_count_ << " blocks" << std::endl;
+        for (uint64_t i = 0; i < node_count_; i++) {
+            std::cout << " node " << i << std::endl;
+            nodes_[i].print();
+        }
+    }
+
+    uint64_t bytes() {
+        return sizeof(b_heap_search) + node_count_ * sizeof(node);
+    }
+};
+
 int main(int argc, char const *argv[]) {
     uint64_t type = 0;
     if (argc > 1) {
