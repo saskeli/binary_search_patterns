@@ -22,6 +22,12 @@ Uses up to double the space of the raw data due to the data not necessarily conf
 
 Is typically the fastest of the approaches as long as the input data is large enough.
 
+### B-heap tree
+
+Combination of B-star tree and Heap ordered binary search. The B-tree nodes are stored in heap order. No child offsets or pointers are stored since children of a node at index `i` will be between indexes `i*B + 1` and `i*B + B`.
+
+Seems to be very space efficient and fast.
+
 ## Usage
 
 Compile with `make binary_search_patterns`.
@@ -70,12 +76,12 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 
 #### 10 million elements
 
-|             | b-star    |heap       | binary   |
-|-------------|-----------|-----------|----------|
-| interlieved | 496.889ns | 461.719ns | 636.547ns|
-| separate    | 455.606ns | 448.614ns | 607.636ns|
-| cacheless*  | 1231.24ns	| 1167.03ns	| 1744.33ns|
-| space       | 157.511MB | 128MB     | 76.294MB |
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 561.28ns  | 498.914ns | 716.946ns | 441.875ns |
+| separate    | 466.803ns | 486.74ns  | 597.929ns | 342.764ns |
+| space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
+
 
 \* All data-structure data was cleared from CPU cachess between queries
 

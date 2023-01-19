@@ -1,9 +1,10 @@
-#include <cstdint>
-#include <iostream>
-#include <vector>
-#include <cstring>
 #include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <iostream>
+#include <iomanip>
 #include <random>
+#include <vector>
 
 #ifndef CACHE_LINE
 // Apparently the most common cache line size is 64.
@@ -11,11 +12,13 @@
 #endif
 
 class control_binary_search {
-    private:
+   private:
     uint64_t const* data_;
     const uint64_t n_;
+
    public:
-    control_binary_search(uint64_t const* data, uint64_t n) : data_(data), n_(n) {}
+    control_binary_search(uint64_t const* data, uint64_t n)
+        : data_(data), n_(n) {}
 
     std::pair<uint64_t, uint64_t> find(uint64_t q) const {
         uint64_t a = 0;
@@ -49,7 +52,7 @@ class b_star_blocks {
         item children[block_size];
 
        private:
-        template<uint16_t size>
+        template <uint16_t size>
         static item branch(const item* arr, uint64_t q) {
             if constexpr (size == 2) {
                 return arr[1].first < q ? arr[1] : arr[0];
@@ -59,7 +62,6 @@ class b_star_blocks {
         }
 
        public:
-
         node() : children() {
             std::fill_n(children, block_size, item(~uint64_t(0), 0));
         }
@@ -73,7 +75,9 @@ class b_star_blocks {
             return *this;
         }
 
-        uint64_t build(uint64_t& i_pos, uint64_t& c_idx, uint64_t n, std::vector<uint64_t>& n_children, node* nd_arr, uint64_t* data) {
+        uint64_t build(uint64_t& i_pos, uint64_t& c_idx, uint64_t n,
+                       std::vector<uint64_t>& n_children, node* nd_arr,
+                       uint64_t* data) {
             uint64_t nn = n_children.back();
             n_children.pop_back();
             if (n_children.size() == 0) {
@@ -85,7 +89,8 @@ class b_star_blocks {
                 for (uint64_t i = 0; i < nn && i < block_size; i++) {
                     nd_arr[i_pos] = {};
                     children[i] = {0, i_pos++};
-                    uint64_t n_s = nd_arr[children[i].second].build(i_pos, c_idx, n, n_children, nd_arr, data);
+                    uint64_t n_s = nd_arr[children[i].second].build(
+                        i_pos, c_idx, n, n_children, nd_arr, data);
                     children[i].first = n_s;
                 }
             }
@@ -104,7 +109,8 @@ class b_star_blocks {
 
         void print() {
             for (uint64_t i = 0; i < block_size; i++) {
-                std::cout << children[i].first << ", " << children[i].second << std::endl;
+                std::cout << children[i].first << ", " << children[i].second
+                          << std::endl;
             }
         }
     };
@@ -112,6 +118,7 @@ class b_star_blocks {
     node* nodes_;
     uint64_t levels_;
     uint64_t node_count_;
+
    public:
     b_star_blocks(uint64_t* data, uint64_t n) : levels_(1) {
         std::vector<uint64_t> c_per_level;
@@ -124,15 +131,15 @@ class b_star_blocks {
             c_per_level.push_back(nn);
             levels_++;
         }
-        std::cout << "Nodes per level" << std::endl;
-        for (uint64_t i = c_per_level.size() - 1; i < c_per_level.size(); i--) {
-            std::cout << "\t" << c_per_level[i] << std::endl;
-        }
         nodes_ = (node*)malloc(node_count_ * sizeof(node));
         uint64_t i_pos = 1;
         uint64_t c_idx = 0;
         nodes_[0] = node();
         nodes_[0].build(i_pos, c_idx, n, c_per_level, nodes_, data);
+    }
+
+    ~b_star_blocks() {
+        free(nodes_);
     }
 
     std::pair<uint64_t, uint64_t> find(uint64_t q) const {
@@ -144,7 +151,8 @@ class b_star_blocks {
     }
 
     void print() {
-        std::cout << "B-star search tree with " << node_count_ << " blocks" << std::endl;
+        std::cout << "B-star search tree with " << node_count_ << " blocks"
+                  << std::endl;
         for (uint64_t i = 0; i < node_count_; i++) {
             std::cout << " node " << i << std::endl;
             nodes_[i].print();
@@ -160,7 +168,7 @@ class heap_order_search {
    public:
     std::vector<uint64_t> items_;
     uint64_t n_;
-    
+
     heap_order_search(uint64_t* data, uint64_t n) : items_(), n_(n - 1) {
         items_.push_back(data[n / 2]);
         build(0, 0, n - 1, data, false);
@@ -185,7 +193,7 @@ class heap_order_search {
         }
         if (a == b) [[unlikely]] {
             return {items_[i], a};
-        } 
+        }
         if (items_[i] >= q) [[likely]] {
             return {items_[stepped_right ? (i - 2) / 2 : i * 2 + 1], a};
         } else {
@@ -194,7 +202,8 @@ class heap_order_search {
     }
 
     void print() {
-        std::cout << "Heap order search tree with " << items_.size() << " nodes";
+        std::cout << "Heap order search tree with " << items_.size()
+                  << " nodes";
         for (uint64_t i = 0; i < items_.size(); i++) {
             if (i % 8 == 0) {
                 std::cout << std::endl;
@@ -211,7 +220,8 @@ class heap_order_search {
     }
 
    private:
-    void build(uint64_t idx, uint64_t a, uint64_t b, uint64_t* data, bool stepped_right) {
+    void build(uint64_t idx, uint64_t a, uint64_t b, uint64_t* data,
+               bool stepped_right) {
         if (a == b) {
             items_[idx] = data[a];
             return;
@@ -251,10 +261,10 @@ class b_heap_search {
         uint64_t children[block_size];
 
        private:
-        template<uint16_t size>
-        static item branch(const item* arr, uint64_t q) {
+        template <uint16_t size>
+        static item branch(const uint64_t* arr, uint64_t q) {
             if constexpr (size == 2) {
-                return arr[1] < q ? {arr[1], 1} : {arr[0], 0};
+                return arr[1] < q ? item(arr[1], 1) : item(arr[0], 0);
             }
             uint64_t offset = (arr[size / 2] < q) * (size / 2);
             item res = branch<size / 2>(arr + offset, q);
@@ -262,10 +272,7 @@ class b_heap_search {
         }
 
        public:
-
-        node() : children() {
-            std::fill_n(children, block_size, ~uint64_t(0));
-        }
+        node() : children() { std::fill_n(children, block_size, ~uint64_t(0)); }
 
         node(const node& other) : children() {
             std::copy(other.children, other.children + block_size, children);
@@ -286,23 +293,18 @@ class b_heap_search {
 
         void print() {
             for (uint64_t i = 0; i < block_size; i++) {
-                std::cout << children[i].first << ", " << children[i].second << std::endl;
+                std::cout << children[i] << (i + 1 < block_size ? ", " : "");
             }
+            std::cout << std::endl;
         }
     };
 
-    struct stack_elem {
-        uint64_t index;
-        uint64_t a;
-        uint64_t b;
-        uint64_t depth;
-    };
-    
     node* nodes_;
     uint64_t levels_;
+    uint64_t node_count_;
+
    public:
     b_heap_search(uint64_t* data, uint64_t n) : levels_(1) {
-        std::vector<uint64_t> c_per_level;
         uint64_t nn = n / block_size + (n % block_size ? 1 : 0);
         uint64_t leaves = nn;
         while (nn > block_size) {
@@ -312,33 +314,42 @@ class b_heap_search {
         uint64_t n_lev = 1;
         uint64_t t_nodes = n_lev;
         for (uint64_t i = 1; i < levels_; i++) {
-            n_lev *= 64;
+            n_lev *= block_size;
             t_nodes += n_lev;
         }
-        nodes_ = (node*)malloc((t_nodes + leaves) * sizeof(node));
-        std::fill_n(nodes_, t_nodes + leaves, node());
-        std::memcpy(nodes_ + t_nodes, data, n);
+        node_count_ = t_nodes + leaves;
+        nodes_ = (node*)malloc((node_count_) * sizeof(node));
+        std::fill_n(nodes_, node_count_, node());
+        std::memcpy(reinterpret_cast<uint64_t*>(nodes_ + t_nodes), data, n * sizeof(uint64_t));
         for (uint64_t i = t_nodes - 1; i < t_nodes; i--) {
             for (uint64_t k = 0; k < block_size; k++) {
                 uint64_t c_idx = i * block_size + k + 1;
-                if (c_idx < t_nodes + leaves) {
-                    nodes[i].children[k] = nodes[i * block_size + k + 1].children[0];
+                if (c_idx < node_count_) {
+                    nodes_[i].children[k] =
+                        nodes_[i * block_size + k + 1].children[0];
                 }
             }
         }
     }
 
+    ~b_heap_search() {
+        free(nodes_);
+    }
+
     std::pair<uint64_t, uint64_t> find(uint64_t q) const {
         std::pair<uint64_t, uint64_t> ret = {0, 0};
-        for (uint64_t i = 0; i < levels_; i++) {
-            auto res = nodes_[ret.second].find(q);
+        uint64_t n_idx = 0;
+        for (uint64_t i = 0; i <= levels_; i++) {
+            auto res = nodes_[n_idx].find(q);
             ret = {res.first, ret.second * block_size + res.second};
+            n_idx = n_idx * block_size + 1 + res.second;
         }
         return ret;
     }
 
     void print() {
-        std::cout << "B-star search tree with " << node_count_ << " blocks" << std::endl;
+        std::cout << "B-heap search tree with " << node_count_ << " blocks"
+                  << std::endl;
         for (uint64_t i = 0; i < node_count_; i++) {
             std::cout << " node " << i << std::endl;
             nodes_[i].print();
@@ -350,7 +361,7 @@ class b_heap_search {
     }
 };
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const* argv[]) {
     uint64_t type = 0;
     if (argc > 1) {
         std::sscanf(argv[1], "%lu", &type);
@@ -369,13 +380,16 @@ int main(int argc, char const *argv[]) {
 
     control_binary_search bins(data, n);
     b_star_blocks<32> b_s(data, n);
-    //b_s.print();
+    // b_s.print();
     heap_order_search h_s(data, n);
-    //h_s.print();
+    // h_s.print();
+    b_heap_search<64> bh_s(data, n);
+    //bh_s.print();
 
     double b_tree_time = 0;
     double h_tree_time = 0;
     double binary_search_time = 0;
+    double bh_tree_time = 0;
 
     using std::chrono::duration_cast;
     using std::chrono::high_resolution_clock;
@@ -383,21 +397,21 @@ int main(int argc, char const *argv[]) {
 
     volatile uint64_t cache_churn = 0;
     volatile uint64_t* buffer;
-    
-    if (type < 2) { // Interlieved
+
+    if (type < 2) {  // Interlieved
         std::cerr << "Running interlieved queries"
                   << (type == 1 ? ", with artificial cache load" : "")
                   << std::endl;
-        std::cout << "q\tb-star\theap\tbinary" 
-                  << std::endl;
+        std::cout << "q\tb-star\theap\tbinary" << std::endl;
         for (uint64_t i = 0; i < m; i++) {
             cache_churn = 0;
-            if (type == 1) { // Adverserial
+            if (type == 1) {  // Adverserial
                 uint64_t elems = 10 * 1024 * 1024 / sizeof(uint64_t);
                 buffer = (uint64_t*)malloc(elems * sizeof(uint64_t));
 
                 std::mt19937 mt;
-                std::uniform_int_distribution<unsigned long long> gen(0, elems - 1);
+                std::uniform_int_distribution<unsigned long long> gen(
+                    0, elems - 1);
 
                 cache_churn = 0;
                 for (uint64_t j = 0; j < elems; j++) {
@@ -431,16 +445,31 @@ int main(int argc, char const *argv[]) {
             std::cout << time << std::endl;
             binary_search_time += time;
 
-            if (r_bs.first != r_hs.first || r_bs.second != r_hs.second || r_hs.first != r.first || r_hs.second != r.second) {
+            start = high_resolution_clock::now();
+            auto r_bh = bh_s.find(q);
+            end = high_resolution_clock::now();
+            time = duration_cast<nanoseconds>(end - start).count();
+            std::cout << time << std::endl;
+            bh_tree_time += time;
+
+            if (r_bs.first != r_hs.first || r_bs.second != r_hs.second ||
+                r_hs.first != r.first || r_hs.second != r.second ||
+                r.first != r_bh.first || r.second != r_bh.second) {
                 std::cerr << "Fubar at " << i << "! q = " << q << std::endl;
-                std::cerr << " binary search: " << r.first << ", " << r.second << std::endl;
-                std::cerr << " b-star tree  : " << r_bs.first << ", " << r_bs.second << std::endl;
-                std::cerr << " heap tree    : " << r_hs.first << ", " << r_hs.second << std::endl;
-                return 1; 
+                std::cerr << " binary search: " << r.first << ", " << r.second
+                          << std::endl;
+                std::cerr << " b-star tree  : " << r_bs.first << ", "
+                          << r_bs.second << std::endl;
+                std::cerr << " heap tree    : " << r_hs.first << ", "
+                          << r_hs.second << std::endl;
+                std::cerr << " b-heap tree  : " << r_bh.first << ", "
+                          << r_bh.second << std::endl;
+                return 1;
             }
         }
-    } else { // Benign
-        std::cerr << "Running queries separately for each structure" << std::endl;
+    } else {  // Benign
+        std::cerr << "Running queries separately for each structure"
+                  << std::endl;
         std::cout << "q\ttype\ttime\tres" << std::endl;
         for (uint64_t i = 0; i < m; i++) {
             q = queries[i];
@@ -448,7 +477,8 @@ int main(int argc, char const *argv[]) {
             auto r_bs = b_s.find(q);
             auto end = high_resolution_clock::now();
             double time = duration_cast<nanoseconds>(end - start).count();
-            std::cout << q << "\tb-star\t" << time << "\t" << r_bs.second << std::endl;
+            std::cout << q << "\tb-star\t" << time << "\t" << r_bs.second
+                      << std::endl;
             b_tree_time += time;
         }
 
@@ -458,7 +488,8 @@ int main(int argc, char const *argv[]) {
             auto r_hs = h_s.find(q);
             auto end = high_resolution_clock::now();
             double time = duration_cast<nanoseconds>(end - start).count();
-            std::cout << q << "\theap_tree\t" << time << "\t" << r_hs.second << std::endl;
+            std::cout << q << "\theap_tree\t" << time << "\t" << r_hs.second
+                      << std::endl;
             h_tree_time += time;
         }
 
@@ -468,20 +499,34 @@ int main(int argc, char const *argv[]) {
             auto res = bins.find(q);
             auto end = high_resolution_clock::now();
             double time = duration_cast<nanoseconds>(end - start).count();
-            std::cout << q << "\tbinary_search\t" << time << "\t" << res.second << std::endl;
+            std::cout << q << "\tbinary_search\t" << time << "\t" << res.second
+                      << std::endl;
             binary_search_time += time;
         }
+
+        for (uint64_t i = 0; i < m; i++) {
+            q = queries[i];
+            auto start = high_resolution_clock::now();
+            auto res = bh_s.find(q);
+            auto end = high_resolution_clock::now();
+            double time = duration_cast<nanoseconds>(end - start).count();
+            std::cout << q << "\tb-heap_search\t" << time << "\t" << res.second
+                      << std::endl;
+            bh_tree_time += time;
+        }
     }
-    
-
-    std::cerr << "b-star\theap\tbinary\n"
-              << b_tree_time / m << "ns\t"
-              << h_tree_time / m << "ns\t"
-              << binary_search_time / m << "ns\n" 
-              << b_s.bytes() / (1024.0 * 1024) << "MB\t" 
-              << h_s.bytes() / (1024.0 * 1024) << "MB\t"
-              << bins.bytes() / (1024.0 * 1024) << "MB" << std::endl;
-
+    std::cerr << std::setprecision(6) 
+              << "|             | b-star    |heap       | binary    | b-heap    |\n"
+              << "|-------------|-----------|-----------|-----------|-----------|\n"
+              << "| time        | " << b_tree_time / m << "ns | " 
+                                    << h_tree_time / m << "ns | "
+                                    << binary_search_time / m << "ns | "
+                                    << bh_tree_time / m << "ns |\n"
+              << "| space       | " << double(b_s.bytes()) / (1024 * 1024) << "MB | "
+                                    << double(h_s.bytes()) / (1024 * 1024) << "MB | "
+                                    << double(bins.bytes()) / (1024 * 1024) << "MB | "
+                                    << double(bh_s.bytes()) / (1024 * 1024) << "MB |"
+                                    << std::endl;
     free(data);
     return 0;
 }
