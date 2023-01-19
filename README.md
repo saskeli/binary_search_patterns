@@ -68,15 +68,18 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 
 ### Intel(R) Core(TM) i5-6200U
 
-10 million elements
+#### 10 million elements
 
 |             | b-star    |heap       | binary   |
 |-------------|-----------|-----------|----------|
 | interlieved | 496.889ns | 461.719ns | 636.547ns|
 | separate    | 455.606ns | 448.614ns | 607.636ns|
+| cacheless*  | 1231.24ns	| 1167.03ns	| 1744.33ns|
 | space       | 157.511MB | 128MB     | 76.294MB |
 
-2**22 elements
+\* All data-structure data was cleared from CPU cachess between queries
+
+#### 2<sup>22</sup> elements
 
 |             | b-star    |heap       | binary   |
 |-------------|-----------|-----------|----------|
@@ -84,7 +87,7 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 | separate    | 409.818ns | 375.593ns | 668.882ns|
 | space       | 66.065MB  | 64MB      | 32MB     |
 
-2**20 elements
+#### 2<sup>20</sup> elements
 
 |             | b-star    |heap       | binary   |
 |-------------|-----------|-----------|----------|
@@ -92,7 +95,7 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 | separate    | 293.726ns | 299.2ns   | 512.58ns |
 | space       | 16.5161MB | 16MB      | 8.00002MB|
 
-100k elements
+#### 100k elements
 
 |             | b-star    |heap       | binary    |
 |-------------|-----------|-----------|-----------|
