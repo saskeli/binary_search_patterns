@@ -85,30 +85,29 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 | space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
 
 
-\* All data-structure data was cleared from CPU cachess between queries
-
 #### 2<sup>22</sup> elements
 
-|             | b-star    |heap       | binary   |
-|-------------|-----------|-----------|----------|
-| interlieved | 450.327ns | 408.321ns | 695.112ns|
-| separate    | 409.818ns | 375.593ns | 668.882ns|
-| space       | 66.065MB  | 64MB      | 32MB     |
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 457ns     | 437.386ns | 740.246ns | 413.903ns |
+| separate    | 403.261ns | 361.765ns | 669.613ns | 280.641ns |
+| space       | 66.065MB  | 64MB      | 32MB      | 34.0318MB |
 
 #### 2<sup>20</sup> elements
 
-|             | b-star    |heap       | binary   |
-|-------------|-----------|-----------|----------|
-| interlieved | 351.858ns | 343.38ns  | 525.796ns|
-| separate    | 293.726ns | 299.2ns   | 512.58ns |
-| space       | 16.5161MB | 16MB      | 8.00002MB|
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 365.352ns | 365.489ns | 553.281ns | 316.461ns |
+| separate    | 290.329ns | 300.275ns | 516.241ns | 241.682ns |
+| space       | 16.5161MB | 16MB      | 8.00002MB | 10.0318MB |
 
 #### 100k elements
 
-|             | b-star    |heap       | binary    |
-|-------------|-----------|-----------|-----------|
-| interlieved | 214.406ns | 233.02ns  | 214.157ns |
-| separate    | 170.457ns | 205.57ns  | 198.599ns |
-| space       | 1.57619MB | 2MB       | 0.762955MB|
+|             | b-star    |heap       | binary    | b-heap    |
+|-------------|-----------|-----------|-----------|-----------|
+| interlieved | 238.594ns | 261.364ns | 239.122ns | 203.512ns |
+| separate    | 169.136ns | 201.664ns | 204.993ns | 124.091ns |
+| space       | 1.57619MB | 2MB       | 0.762955MB| 0.794945MB|
+
 
 
