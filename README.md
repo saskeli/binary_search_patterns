@@ -73,6 +73,8 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 | separate    | 303.785ns | 345.14ns  | 422.613ns | 241.694ns |
 | space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
 
+**Note**: The act of outputting the per-query timings to an actual file resulted in a slowdown to the reported query times as well as skewed the results somewhat. So the results in the table don't 100% agree with the images below.
+
 ![](interlieved_E7-8890.png)
 
 ![](separate_E7-8890.png)
