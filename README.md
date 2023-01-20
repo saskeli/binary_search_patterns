@@ -73,6 +73,9 @@ Pipe data to ´/dev/null´ to avoid creating large tsv files with query data. If
 | separate    | 303.785ns | 345.14ns  | 422.613ns | 241.694ns |
 | space       | 157.511MB | 128MB     | 76.294MB  | 78.3257MB |
 
+![](interlieved_E7-8890.png)
+
+![](separate_E7-8890.png)
 
 ### Intel(R) Core(TM) i5-6200U
 
