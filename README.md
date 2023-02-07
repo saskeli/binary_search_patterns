@@ -2,6 +2,17 @@
 
 Testing a few binary search-based implementation on static sorted  data.
 
+
+## Citing
+
+If you find this michrobenchmark usefull, please cite:
+
+D. Diaz, S. Dönges, S. Puglisi and L. Salmela. Simple Runs-bounded FM-index Designs are Fast. 2023
+
+Better information hopefully following soon (Feb 2023).
+
+## Implemented variants
+
 ### binary search
 
 Straight up classical binary search, with the implied inefficient memory access pattern.
