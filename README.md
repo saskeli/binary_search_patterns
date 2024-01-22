@@ -7,9 +7,9 @@ Testing a few binary search-based implementation on static sorted  data.
 
 If you find this michrobenchmark usefull, please cite:
 
-D. Diaz, S. Dönges, S. Puglisi and L. Salmela. Simple Runs-bounded FM-index Designs are Fast. 2023
+Diego Díaz-Domínguez, Saska Dönges, Simon J. Puglisi, and Leena Salmela. Simple Runs-Bounded FM-Index Designs Are Fast. In 21st International Symposium on Experimental Algorithms (SEA 2023). Leibniz International Proceedings in Informatics (LIPIcs), Volume 265, pp. 7:1-7:16, Schloss Dagstuhl - Leibniz-Zentrum für Informatik (2023)
 
-Better information hopefully following soon (Feb 2023).
+https://doi.org/10.4230/LIPIcs.SEA.2023.7
 
 ## Implemented variants
 
