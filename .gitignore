@@ -33,11 +33,22 @@
 *.exe
 *.out
 *.app
-binary_search_patterns
+bf_test
+bench
+bench_avx
+profile
+profile_avx
+test/test
 
 # Proiling and testing
 vgcore.*
 *.dat
 *.txt
 cachegrind.out*
+*.prof
+*.res
+
+#plots
+*.png
+*.pdf
 
