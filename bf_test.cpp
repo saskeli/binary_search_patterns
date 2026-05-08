@@ -38,6 +38,7 @@ void run_test(std::mt19937_64& gen, T limit) {
   std::sort(arr.begin(), arr.end());
   std::uniform_int_distribution<T> q_dist(arr[0], limit);
   control_binary_search<T, 1, short_circuit> b_s(arr.data(), size);
+  branchless_binary_search<T, 1, short_circuit> bb_s(arr.data(), size);
   heap_order_search<T, 1, short_circuit> h_s(arr.data(), size);
   b_plus_blocks<T, block_size, short_circuit> b_plus(arr.data(), size);
   b_plus_heap_search<T, block_size, short_circuit> b_p_heap(arr.data(), size);
@@ -46,11 +47,15 @@ void run_test(std::mt19937_64& gen, T limit) {
   for (size_t i = 0; i < 10000; ++i) {
     T v = q_dist(gen);
     T b_s_r = b_s.find(v);
+    T bb_s_r = bb_s.find(v);
     T h_s_r = h_s.find(v);
     T b_plus_r = b_plus.find(v);
     T b_p_heap_r = b_p_heap.find(v);
     T b_b_r = b_b.find(v);
     T b_hs_r = b_hs.find(v);
+    if (b_s_r != bb_s_r) {
+      report(arr, v, "branchless binary search", b_s_r, bb_s_r, block_size, short_circuit);
+    }
     if (b_s_r != h_s_r) {
       report(arr, v, "Heap-ordered binary search", b_s_r, h_s_r, block_size, short_circuit);
     }

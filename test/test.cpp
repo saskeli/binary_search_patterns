@@ -9,6 +9,7 @@
 template <class arr_t, uint16_t block_size, bool short_circuit>
 void run_test(const arr_t& arr, typename arr_t::value_type q, typename arr_t::value_type res) {
   control_binary_search<typename arr_t::value_type, 1, short_circuit> b_s(arr.data(), arr.size());
+  branchless_binary_search<typename arr_t::value_type, 1, short_circuit> bb_s(arr.data(), arr.size());
   heap_order_search<typename arr_t::value_type, 1, short_circuit> h_s(arr.data(), arr.size());
   b_plus_blocks<typename arr_t::value_type, block_size, short_circuit> b_star(arr.data(), arr.size());
   b_plus_heap_search<typename arr_t::value_type, block_size, short_circuit> b_s_heap(arr.data(), arr.size());
@@ -16,6 +17,7 @@ void run_test(const arr_t& arr, typename arr_t::value_type q, typename arr_t::va
   b_heap_search<typename arr_t::value_type, block_size, short_circuit> b_hs(arr.data(), arr.size());
 
   ASSERT_EQ(b_s.find(q), res);
+  ASSERT_EQ(bb_s.find(q), res);
   ASSERT_EQ(h_s.find(q), res);
   ASSERT_EQ(b_star.find(q), res);
   ASSERT_EQ(b_s_heap.find(q), res);

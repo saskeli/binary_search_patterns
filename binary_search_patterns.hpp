@@ -14,6 +14,8 @@
 #define CACHE_LINE 64
 #endif
 
+#define ONE uint64_t(1)
+
 template <class T = uint64_t, uint16_t block_size = 1,
           bool short_circuit = false, bool prefetch = false>
 class control_binary_search {
@@ -46,8 +48,39 @@ class control_binary_search {
   size_t bytes() { return sizeof(control_binary_search) + n_ * sizeof(T); }
 };
 
+template <class T = uint64_t, uint16_t block_size = 1,
+          bool short_circuit = false, bool prefetch = false>
+class branchless_binary_search {
+ private:
+  T const* data_;
+  const size_t n_;
+
+ public:
+  branchless_binary_search(T const* data, size_t n) : data_(data), n_(n) {}
+
+  T find(T q) const {
+    size_t a = 0;
+    size_t b = n_ - 1;
+    while (a < b) {
+      size_t m = (a + b + 1) / 2;
+      T v = data_[m];
+      if constexpr (short_circuit) {
+        if (v == q) [[unlikely]] {
+          return q;
+        }
+      }
+      bool r = v > q;
+      b = (r * (m - 1)) + (!r * b);
+      a = (r * a) + (!r * m);
+    }
+    return data_[a];
+  }
+
+  size_t bytes() { return sizeof(branchless_binary_search) + n_ * sizeof(T); }
+};
+
 template <class T, uint16_t block_size = 1024, bool short_circuit = false,
-          bool prefetch = false>
+          bool prefetch = false, bool linear_time_search = false>
 class b_plus_blocks {
  private:
   static_assert(__builtin_popcount(block_size) == 1);
@@ -60,15 +93,25 @@ class b_plus_blocks {
     std::array<node*, block_size> children;
 
     node() {
-      std::fill_n(elements, block_size, std::numeric_limits<T>::max());
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        std::fill_n(elements, block_size, std::numeric_limits<T>::max());
+      } else {
+        std::fill_n(elements, block_size, T::max_val());
+      }
       std::fill_n(children, block_size, nullptr);
     }
 
     node(T const* arr, size_t elem_count = block_size) {
       std::copy_n(arr, elem_count, elements.data());
       if (elem_count < block_size) [[unlikely]] {
+        T fill_v;
+        if constexpr (std::numeric_limits<T>::is_specialized) {
+          fill_v = std::numeric_limits<T>::max();
+        } else {
+          fill_v = T::max_val();
+        }
         std::fill_n(elements.data() + elem_count, block_size - elem_count,
-                    std::numeric_limits<T>::max());
+                    fill_v);
       }
       for (size_t i = 0; i < block_size; ++i) {
         children[i] = nullptr;
@@ -81,8 +124,14 @@ class b_plus_blocks {
         children[i] = arr[i];
       }
       if (elem_count < block_size) [[unlikely]] {
+        T fill_v;
+        if constexpr (std::numeric_limits<T>::is_specialized) {
+          fill_v = std::numeric_limits<T>::max();
+        } else {
+          fill_v = T::max_val();
+        }
         std::fill_n(elements.data() + elem_count, block_size - elem_count,
-                    std::numeric_limits<T>::max());
+                    fill_v);
         std::fill_n(children.data() + elem_count, block_size - elem_count,
                     nullptr);
       }
@@ -118,13 +167,22 @@ class b_plus_blocks {
           }
         }
       }
-      return search(elements, q);
+      if constexpr (linear_time_search) {
+        return linear_scan_cmov<T, uint16_t, block_size>(elements.data(), q);
+      }
+      return templated_cmov<T, uint16_t, block_size>(elements.data(), q);
     }
 
     void print(std::string indent = "") {
       std::cout << indent;
+      T max_v;
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        max_v = std::numeric_limits<T>::max();
+      } else {
+        max_v = T::max_val();
+      }
       for (size_t i = 0; i < block_size; i++) {
-        if (elements[i] == std::numeric_limits<T>::max()) {
+        if (elements[i] == max_v) {
           break;
         }
         if (i > 0 && i < block_size) {
@@ -148,6 +206,7 @@ class b_plus_blocks {
   node* root_;
   size_t levels_;
   size_t node_count_;
+  size_t leaf_count_;
 
  public:
   b_plus_blocks(T const* data, size_t n) : levels_(1) {
@@ -170,6 +229,7 @@ class b_plus_blocks {
       nd_ptr = new node(data + i, n - i);
       a_q.push_back(nd_ptr);
     }
+    leaf_count_ = a_q.size();
     std::vector<node*> b_q;
     while (a_q.size() > 1) {
       for (i = 0; i + block_size < a_q.size() + 1; i += block_size) {
@@ -214,11 +274,24 @@ class b_plus_blocks {
     root_->print();
   }
 
-  size_t bytes() { return sizeof(b_plus_blocks) + node_count_ * sizeof(node); }
+  size_t bytes() {
+    return sizeof(b_plus_blocks) + node_count_ * sizeof(node) -
+           leaf_count_ * sizeof(node::children);
+  }
 };
 
-template <class T, uint16_t block_size, bool short_circuit = false,
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
           bool prefetch = false>
+using b_plus_blocks_linear =
+    b_plus_blocks<T, block_size, short_circuit, prefetch, true>;
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_plus_blocks_logarithmic =
+    b_plus_blocks<T, block_size, short_circuit, prefetch, false>;
+
+template <class T, uint16_t block_size, bool short_circuit = false,
+          bool prefetch = false, bool linear_time_search = false>
 class b_blocks {
  private:
   static_assert(__builtin_popcount(block_size) == 1);
@@ -231,7 +304,13 @@ class b_blocks {
     std::array<node*, block_size> children;
 
     node() {
-      std::fill_n(elements.data(), block_size, std::numeric_limits<T>::max());
+      T fill_v;
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        fill_v = std::numeric_limits<T>::max();
+      } else {
+        fill_v = T::max_val();
+      }
+      std::fill_n(elements.data(), block_size, fill_v);
       std::fill_n(children.data(), block_size, nullptr);
     }
 
@@ -265,13 +344,22 @@ class b_blocks {
           }
         }
       }
-      return search(elements, q);
+      if constexpr (linear_time_search) {
+        return linear_scan_cmov<T, uint16_t, block_size>(elements.data(), q);
+      }
+      return templated_cmov<T, uint16_t, block_size>(elements.data(), q);
     }
 
     void print(std::string indent = "") {
       std::cout << indent;
+      T max_v;
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        max_v = std::numeric_limits<T>::max();
+      } else {
+        max_v = T::max_val();
+      }
       for (size_t i = 0; i < block_size; i++) {
-        if (elements[i] == std::numeric_limits<T>::max()) {
+        if (elements[i] == max_v) {
           break;
         }
         if (i > 0 && i < block_size) {
@@ -295,12 +383,14 @@ class b_blocks {
   node* root_;
   size_t levels_;
   size_t node_count_;
+  size_t leaf_count_;
 
   template <class vec_t>
   void static build(T const* arr, size_t size, node* nd,
-                    const vec_t& level_counts, size_t level,
-                    size_t& node_count) {
+                    const vec_t& level_counts, size_t level, size_t& node_count,
+                    size_t& leaf_count) {
     if (size <= block_size) {
+      ++leaf_count;
       std::copy_n(arr, size, nd->elements.data());
       return;
     }
@@ -316,7 +406,7 @@ class b_blocks {
       size_t t_size =
           level_counts[level - 1] < rest ? level_counts[level - 1] : rest;
       build(arr + t_idx + 1, t_size, nd->children[i], level_counts, level - 1,
-            node_count);
+            node_count, leaf_count);
     }
   }
 
@@ -329,7 +419,9 @@ class b_blocks {
     levels_ = level_counts.size();
     root_ = new node();
     node_count_ = 1;
-    build(arr, size, root_, level_counts, level_counts.size() - 1, node_count_);
+    leaf_count_ = 0;
+    build(arr, size, root_, level_counts, level_counts.size() - 1, node_count_,
+          leaf_count_);
   }
 
   ~b_blocks() {
@@ -377,37 +469,47 @@ class b_blocks {
     root_->print();
   }
 
-  size_t bytes() { return sizeof(b_blocks) + node_count_ * sizeof(node); }
+  size_t bytes() {
+    return sizeof(b_blocks) + node_count_ * sizeof(node) -
+           leaf_count_ * sizeof(node::children);
+  }
 };
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_blocks_linear = b_blocks<T, block_size, short_circuit, prefetch, true>;
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_blocks_logarithmic =
+    b_blocks<T, block_size, short_circuit, prefetch, false>;
 
 template <class T, uint16_t block_size, bool short_circuit = false,
           bool prefetch = false>
 class heap_order_search {
  public:
+  size_t internal_nodes_;
   std::vector<T> items_;
 
-  heap_order_search(T const* data, size_t n)
-      : items_((1 << (64 - __builtin_clzll(n))) - 1,
-               std::numeric_limits<T>::max()) {
-    size_t m = n / 2;
-    items_[0] = data[m];
-    build(0, m, 1, data);
-    build(m + 1, n, 2, data);
+  heap_order_search(T const* data, size_t n) : items_() {
+    internal_nodes_ = (ONE << (64 - __builtin_clzll(n - 1))) - 1;
+    items_.resize(internal_nodes_ + n);
+    std::copy_n(data, n, items_.data() + internal_nodes_);
+    build(0);
   }
 
   T find(T q) const {
     size_t idx = 0;
-    T pred = 0;
-    while (idx < items_.size()) {
+    while (idx < internal_nodes_) {
+      T val = items_[idx];
       if constexpr (short_circuit) {
-        if (items_[idx] == q) [[unlikely]] {
+        if (val == q) [[unlikely]] {
           return q;
         }
       }
-      T val = items_[idx];
-      idx = val > q ? idx * 2 + 1 : (pred = std::max(pred, val), idx * 2 + 2);
+      idx = val > q ? idx * 2 + 1 : idx * 2 + 2;
     }
-    return pred;
+    return items_[idx];
   }
 
   void print() {
@@ -428,19 +530,25 @@ class heap_order_search {
   }
 
  private:
-  void build(size_t left, size_t right, size_t target_index, T const* data) {
-    if (left >= right) {
-      return;
+  T build(size_t target_index) {
+    if (target_index >= items_.size()) {
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        return std::numeric_limits<T>::max();
+      } else {
+        return T::max_val();
+      }
+    } else if (target_index >= internal_nodes_) {
+      return items_[target_index];
     }
-    size_t m = (left + right) / 2;
-    items_[target_index] = data[m];
-    build(left, m, target_index * 2 + 1, data);
-    build(m + 1, right, target_index * 2 + 2, data);
+
+    T l_min_v = build(target_index * 2 + 1);
+    items_[target_index] = build(target_index * 2 + 2);
+    return l_min_v;
   }
 };
 
 template <class T, uint16_t block_size = 64, bool short_circuit = false,
-          bool prefetch = false>
+          bool prefetch = false, bool linear_time_search = false>
 class b_plus_heap_search {
  private:
   static_assert(__builtin_popcountll(block_size) == 1);
@@ -452,7 +560,11 @@ class b_plus_heap_search {
     std::array<T, block_size> elements;
 
     node() {
-      std::fill_n(elements.data(), block_size, std::numeric_limits<T>::max());
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        std::fill_n(elements.data(), block_size, std::numeric_limits<T>::max());
+      } else {
+        std::fill_n(elements.data(), block_size, T::max_val());
+      }
     }
 
     node(const node& other) { elements = other.elements; }
@@ -462,10 +574,15 @@ class b_plus_heap_search {
       return *this;
     }
 
-    size_t find(uint64_t q) const { return search(elements, q); }
+    size_t find(T q) const {
+      if constexpr (linear_time_search) {
+        return linear_scan_cmov<T, uint16_t, block_size>(elements.data(), q);
+      }
+      return templated_cmov<T, uint16_t, block_size>(elements.data(), q);
+    }
 
     void print() {
-      for (uint64_t i = 0; i < block_size; i++) {
+      for (uint16_t i = 0; i < block_size; i++) {
         std::cout << elements[i] << (i + 1 < block_size ? ", " : "");
       }
       std::cout << std::endl;
@@ -541,8 +658,18 @@ class b_plus_heap_search {
   }
 };
 
-template <class T, uint16_t block_size = 64, bool short_circuit = false,
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
           bool prefetch = false>
+using b_plus_heap_linear =
+    b_plus_heap_search<T, block_size, short_circuit, prefetch, true>;
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_plus_heap_logarithmic =
+    b_plus_heap_search<T, block_size, short_circuit, prefetch, false>;
+
+template <class T, uint16_t block_size = 64, bool short_circuit = false,
+          bool prefetch = false, bool linear_time_search = false>
 class b_heap_search {
  private:
   static_assert(__builtin_popcountll(block_size) == 1);
@@ -554,7 +681,11 @@ class b_heap_search {
     std::array<T, block_size> elements;
 
     node() {
-      std::fill_n(elements.data(), block_size, std::numeric_limits<T>::max());
+      if constexpr (std::numeric_limits<T>::is_specialized) {
+        std::fill_n(elements.data(), block_size, std::numeric_limits<T>::max());
+      } else {
+        std::fill_n(elements.data(), block_size, T::max_val());
+      }
     }
 
     node(const node& other) { elements = other.elements; }
@@ -564,10 +695,15 @@ class b_heap_search {
       return *this;
     }
 
-    size_t find(uint64_t q) const { return search(elements, q); }
+    size_t find(T q) const {
+      if constexpr (linear_time_search) {
+        return linear_scan_cmov<T, uint16_t, block_size>(elements.data(), q);
+      }
+      return templated_cmov<T, uint16_t, block_size>(elements.data(), q);
+    }
 
     void print() {
-      for (uint64_t i = 0; i < block_size; i++) {
+      for (uint16_t i = 0; i < block_size; i++) {
         std::cout << elements[i] << (i + 1 < block_size ? ", " : "");
       }
       std::cout << std::endl;
@@ -669,3 +805,13 @@ class b_heap_search {
     return sizeof(b_heap_search) + node_count_ * sizeof(node);
   }
 };
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_heap_linear =
+    b_heap_search<T, block_size, short_circuit, prefetch, true>;
+
+template <class T, uint16_t block_size = 1024, bool short_circuit = false,
+          bool prefetch = false>
+using b_heap_logarithmic =
+    b_heap_search<T, block_size, short_circuit, prefetch, false>;
