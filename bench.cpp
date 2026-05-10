@@ -241,6 +241,7 @@ void run_dec(benchmark::State& state) {
 DTYP_BENCH(control_binary_search, 1, false)
 DTYP_BENCH(branchless_binary_search, 1, false)
 DTYP_BENCH(heap_order_search, 1, false)
+DTYP_BENCH(heap_order_search, 1, true)
 BLOCKING_BENCH(b_plus_blocks_linear)
 BLOCKING_BENCH(b_plus_blocks_logarithmic)
 BLOCKING_BENCH(b_blocks_linear)

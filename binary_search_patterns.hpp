@@ -501,6 +501,9 @@ class heap_order_search {
   T find(T q) const {
     size_t idx = 0;
     while (idx < internal_nodes_) {
+      if constexpr (prefetch) {
+        __builtin_prefetch(items_.data() + (8 * idx + 7));
+      }
       T val = items_[idx];
       if constexpr (short_circuit) {
         if (val == q) [[unlikely]] {
