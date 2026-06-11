@@ -6,18 +6,18 @@ MACHINE=$(shell lscpu | grep -o -P "(?<=Model name:).*" | sed -E 's/\s+//; s/\(\
 
 CFLAGS=-march=native -std=c++2a -Wall -Wextra -Wshadow -pedantic
 BENCH=-isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread
-CMAKE_OPT=-DBENCHMARK_DOWNLOAD_DEPENDENCIES=on -DCMAKE_BUILD_TYPE=Release
+CMAKE_OPT=-DCMAKE_BUILD_TYPE=Release -DBENCHMARK_ENABLE_TESTING=OFF -DBENCHMARK_ENABLE_GTEST_TESTS=OFF -DBENCHMARK_DOWNLOAD_DEPENDENCIES=OFF
 
-bench: bench.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/lib/libgtest.a
+bench: bench.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/src/libbenchmark.a
 	g++ $(CFLAGS) -DCACHE_LINE=$(CL) -DNDEBUG -DDEPENDENCE_INSERTION -Ofast bench.cpp $(BENCH) -o bench
 
-bench_avx: bench.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/lib/libgtest.a
+bench_avx: bench.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/src/libbenchmark.a
 	g++ $(CFLAGS) -DCACHE_LINE=$(CL) -DNDEBUG -Ofast bench.cpp $(BENCH) -o bench_avx
 
-profile: profile.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/lib/libgtest.a
+profile: profile.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/src/libbenchmark.a
 	g++ $(CFLAGS) -DCACHE_LINE=$(CL) -DNDEBUG -DDEPENDENCE_INSERTION -Ofast profile.cpp $(BENCH) -o profile
 
-profile_avx: profile.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/lib/libgtest.a
+profile_avx: profile.cpp binary_search_patterns.hpp search_microbench/searchers.hpp benchmark/build/src/libbenchmark.a
 	g++ $(CFLAGS) -DCACHE_LINE=$(CL) -DNDEBUG -Ofast profile.cpp $(BENCH) -o profile_avx
 
 bf_test: bf_test.cpp binary_search_patterns.hpp search_microbench/searchers.hpp
@@ -29,7 +29,7 @@ search_microbench/searchers.hpp:
 benchmark/include:
 	git submodule update --init
 
-benchmark/build/lib/libgtest.a: | benchmark/include
+benchmark/build/src/libbenchmark.a: | benchmark/include
 	mkdir -p benchmark/build
 	(cd benchmark; cmake $(CMAKE_OPT) -S . -B "build")
 	(cd benchmark; cmake --build "build" --config Release)
@@ -48,9 +48,7 @@ test: test/test
 
 run: bench bench_avx profile profile_avx
 	./bench | tee $(MACHINE).res
-	./bench_avx | tee $(MACHINE)_avx.res
 	./profile | tee $(MACHINE).prof
-	./profile | tee $(MACHINE)_avx.prof
 
 clean:
 	rm -f bench
