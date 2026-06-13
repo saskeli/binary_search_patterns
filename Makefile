@@ -46,7 +46,7 @@ test/test: googletest/build/lib/libgtest_main.a test/test.cpp binary_search_patt
 test: test/test
 	test/test $(ARG)
 
-run: bench bench_avx profile profile_avx
+run: bench profile
 	./bench | tee $(MACHINE).res
 	./profile | tee $(MACHINE).prof
 
