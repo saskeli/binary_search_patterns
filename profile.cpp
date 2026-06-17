@@ -42,7 +42,7 @@ template <class T, class searcher_t, size_t n, class counter_t>
 void run_fp_bench(counter_t& counter) {
   std::mt19937_64 gen;
   std::vector<T> arr;
-  std::uniform_real_distribution<T> dist(0.0, std::numeric_limits<T>::max());
+  std::uniform_real_distribution<T> dist(0.00003, 1.7e38);
   arr.push_back(0.0);
   for (size_t i = 1; i < n; ++i) {
     arr.push_back(dist(gen));
@@ -53,11 +53,11 @@ void run_fp_bench(counter_t& counter) {
   for (size_t i = 0; i < q_arr.size(); ++i) {
     q_arr[i] = dist(gen);
   }
-  uint64_t checksum = 0;
+  T checksum = 0;
   counter.clear();
   for (auto q : q_arr) {
 #ifdef DEPENDENCE_INSERTION
-    reinterpret_cast<char*>(&q)[0] ^= checksum & 0b1;
+    reinterpret_cast<char*>(&q)[0] ^= reinterpret_cast<char*>(&checksum)[0] & 0b1;
 #endif
     checksum += searcher.find(q);
   }
